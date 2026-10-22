@@ -1,0 +1,59 @@
+name: Accessibility audit
+run-name: "Audit: ${{ inputs.sitemap || inputs.urls }}"
+
+# Started by hand: Actions → Accessibility audit → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      sitemap:
+        description: 'Sitemap URL, e.g. https://www.example.com/sitemap.xml (or use "urls")'
+        required: false
+      urls:
+        description: 'Or: URLs to audit, separated by spaces'
+        required: false
+      lang:
+        description: 'Report language / Sprache des Reports'
+        type: choice
+        options: [de, en]
+        default: de
+      max-pages:
+        description: 'Maximum number of pages / Höchstzahl an Seiten'
+        default: '50'
+      follow-links:
+        description: 'Also audit links found on the pages (same site only)'
+        type: boolean
+        default: false
+      contact-url:
+        description: 'Your contact URL, sent in the user agent so site operators can reach you'
+        required: false
+
+# The audit needs no access to this repository.
+permissions: {}
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Audit
+        uses: locorida/wcag-scout@v0.1.0
+        with:
+          sitemap: ${{ inputs.sitemap }}
+          urls: ${{ inputs.urls }}
+          lang: ${{ inputs.lang }}
+          max-pages: ${{ inputs.max-pages }}
+          follow-links: ${{ inputs.follow-links }}
+          contact-url: ${{ inputs.contact-url }}
+          format: html,pdf,json
+          # The job stays green; the findings are in the report and the job summary.
+          fail-on: never
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-report
+          path: wcag-scout-report
+          if-no-files-found: error
+          # Reports are deleted automatically after a week.
+          retention-days: 7
